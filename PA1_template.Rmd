@@ -5,21 +5,58 @@ output:
     keep_md: true
 ---
 
-
 ## Loading and preprocessing the data
-
-
-
+```{r}
+# Load data
+data <- read.csv("activity.csv")
+data$interval <- as.factor(data$interval)
+summary(data)
+```
 ## What is mean total number of steps taken per day?
 
+```{r}
+dateLevels <- levels(data$date)
 
+meanStepsPerDay = data.frame(date=c(), stepSum=c())
+totalStepsPerDay = data.frame(date=c(), stepSum=c())
+# Organize per day
+for(d in dateLevels) {
+  daysData <- data[data$date == d,]
+  s <- sum(daysData$steps[!is.na(daysData$steps)])
+  totalStepsPerDay <- rbind(totalStepsPerDay, data.frame(date=d,stepSum=s))
+}
+
+hist(totalStepsPerDay$stepSum,breaks=10,xlab="Steps per day",main="Histogram of Steps per Day")
+
+```
 
 ## What is the average daily activity pattern?
 
+```{r}
+# This section is almost certainly wrong
+intervalLevels <- levels(data$interval)
 
+meanStepsPerInterval = data.frame(interval=c(), stepSum=c())
+
+for(i in intervalLevels) {
+  intervalsData <- data[data$interval == i,]
+  m <- mean(intervalsData$steps[!is.na(intervalsData$steps)])
+  meanStepsPerInterval <- rbind(meanStepsPerInterval, data.frame(interval=i,stepSum=m))
+}
+
+meanStepsPerInterval
+
+```
 
 ## Imputing missing values
+```{r}
+# Clean up NAs in the steps by imputing with the mean.
 
+meanSteps <- mean(data$steps[!is.na(data$steps)])
+data$steps[is.na(data$steps)] <- meanSteps
+summary(data)
+
+```
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
