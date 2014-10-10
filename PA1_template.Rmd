@@ -1,50 +1,54 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
 output: 
-  html_document:
-    keep_md: true
+html_document:
+keep_md: true
 ---
 
 ## Loading and preprocessing the data
+
+First we load the activity data.  We convert the interval column into a factor to make it easier to work with, as it is not continous numeric data but instead a discrete feature, like the date.
+
 ```{r}
 # Load data
 data <- read.csv("activity.csv")
+
+# Convert the interval column into a factor.  
 data$interval <- as.factor(data$interval)
+
+# Display summary for the data.  This will be done whenever the data has been processed to highlight the changes made.
 summary(data)
 ```
 ## What is mean total number of steps taken per day?
 
-```{r}
-dateLevels <- levels(data$date)
+To find the mean total number of steps taken per day, we subset the data by date and find the total steps per day.  This quantity then is used to calculate the mean steps per day.
 
-meanStepsPerDay = data.frame(date=c(), stepSum=c())
-totalStepsPerDay = data.frame(date=c(), stepSum=c())
-# Organize per day
-for(d in dateLevels) {
-  daysData <- data[data$date == d,]
-  s <- sum(daysData$steps[!is.na(daysData$steps)])
-  totalStepsPerDay <- rbind(totalStepsPerDay, data.frame(date=d,stepSum=s))
+```{r}
+# First, we are going to define a reuable function for this reporting.  This will allow us to easily report the new values later in the research, when we have imputed the missing data.
+reportMeanSteps <- function() {
+  dateLevels <- levels(data$date)
+  
+  totalStepsPerDay =data.frame(sumSteps = c(), date=c())
+  # Organize per day
+  for(d in dateLevels) {
+    s <- sum(data[data$date == d,]$steps, na.rm=TRUE)
+    totalStepsPerDay <- rbind(totalStepsPerDay, data.frame(sumSteps = s, date = d))
+  }
+  
+  hist(totalStepsPerDay$sumSteps,breaks=10,xlab="Steps per day",main="Histogram of Steps per Day")
+  print(paste("The mean total steps per day is",mean(totalStepsPerDay$sumSteps)," and the median total steps per day is",median(totalStepsPerDay$sumSteps)))      
 }
 
-hist(totalStepsPerDay$stepSum,breaks=10,xlab="Steps per day",main="Histogram of Steps per Day")
-
+# Call the function to create the initial report.
+reportMeanSteps()
 ```
 
 ## What is the average daily activity pattern?
 
 ```{r}
-# This section is almost certainly wrong
+#TODO
 intervalLevels <- levels(data$interval)
 
-meanStepsPerInterval = data.frame(interval=c(), stepSum=c())
-
-for(i in intervalLevels) {
-  intervalsData <- data[data$interval == i,]
-  m <- mean(intervalsData$steps[!is.na(intervalsData$steps)])
-  meanStepsPerInterval <- rbind(meanStepsPerInterval, data.frame(interval=i,stepSum=m))
-}
-
-meanStepsPerInterval
 
 ```
 
@@ -52,11 +56,42 @@ meanStepsPerInterval
 ```{r}
 # Clean up NAs in the steps by imputing with the mean.
 
-meanSteps <- mean(data$steps[!is.na(data$steps)])
-data$steps[is.na(data$steps)] <- meanSteps
+# First report a count of unavailable data.
+print(paste("There are",sum(is.na(data)),"rows with NA values."))
+
+for(interval in intervalLevels) {
+  intervalMean <- mean(data[data$interval == interval,]$steps, na.rm=TRUE)
+  data[(data$interval == interval) & (is.na(data$steps)),]$steps <- intervalMean
+}
+
+# Report the count after imputing. This should always be zero.
+print(paste("After simple imputation, there are",sum(is.na(data)),"rows with NA values."))
 summary(data)
+
+# Report on the data after imputing.
+reportMeanSteps()
 
 ```
 
+After imputing the missing data by interval, the data has become closer to (but not exactly) a normal distribution, with the median and the mean being equal. 
 
 ## Are there differences in activity patterns between weekdays and weekends?
+
+The following graph highlights the differences between weekend and weekday activity.  Weekend appear to have a narrow interval band, and less overall activity.
+
+```{r}
+
+dayType <- rep("Weekday",times = length(data$date))
+
+isWeekend <- weekdays(as.Date(data$date)) %in% c("Saturday", "Sunday")
+
+dayType[isWeekend] <- "Weekend"
+data2 <- data.frame(data, dayType)
+
+# plot() is easier for simple plot but ggplot makes the fancier panel plot easier.
+library(ggplot2)
+
+ggplot(data2,aes(interval,steps))+geom_line() + facet_wrap(~dayType, nrow=2) +labs(title="Step per interval, by weekend and weekday")
+
+
+```
